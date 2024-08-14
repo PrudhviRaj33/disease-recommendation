@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Suggestion App</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            position: relative;
+        }
+        textarea {
+            width: calc(100% - 22px);
+            height: 100px;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .speech-buttons {
+            margin-top: 20px;
+        }
+        .speech-buttons button {
+            margin-right: 10px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        h2 {
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .section p {
+            line-height: 1.6;
+        }
+        .feedback {
+            color: red;
+            font-weight: bold;
+        }
+        /* Loader Styles */
+        .loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #4CAF50;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .language-select {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Plant Suggestion Application</h1>
+    </header>
+    <div class="container">
+        <div class="loader" id="loader"></div>
+        
+        <div class="language-select">
+            <label for="language-select">Select Language:</label>
+            <select id="language-select">
+                <option value="en-US">English</option>
+                <option value="te-IN">Telugu</option>
+            </select>
+        </div>
+        
+        <form id="plant-form" method="post" action="/">
+            <p>Enter a disease:</p>
+            <textarea id="disease-input" name="disease" placeholder="Type here..."></textarea><br>
+            <button type="submit">Submit</button>
+        </form>
+        
+        <div class="speech-buttons">
+            <button id="record-btn">🎤 Record Speech</button>
+            <button id="play-btn" onclick="playSolution()">🔊 Hear Solution</button>
+            <button id="stop-btn" onclick="stopSpeech()">⏹️ Stop Speech</button>
+        </div>
+        
+        <div id="results">
+            {% if disease %}
+                <div class="section">
+                    <h2>Disease:</h2>
+                    <p>{{ disease }}</p>
+                </div>
+            {% endif %}
+            {% if plants %}
+                <div class="section">
+                    <div id="solution">{{ plants|safe }}</div>
+                </div>
+            {% endif %}
+            {% if not plants and not disease %}
+                <p class="feedback">Please enter a disease and submit to get plant suggestions.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Get the selected language
+        const languageSelect = document.getElementById('language-select');
+        
+        // Show loader during form submission
+        const form = document.getElementById('plant-form');
+        const loader = document.getElementById('loader');
+        
+        form.addEventListener('submit', () => {
+            loader.style.display = 'block';
+        });
+
+        // Speech Recognition API
+        const recordBtn = document.getElementById('record-btn');
+        const diseaseInput = document.getElementById('disease-input');
+
+        let recognition;
+        const initializeRecognition = () => {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.interimResults = false;
+
+                recordBtn.addEventListener('click', () => {
+                    recognition.lang = languageSelect.value;
+                    recognition.start();
+                });
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    diseaseInput.value = transcript;
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error', event.error);
+                    alert('Error occurred during speech recognition. Please try again.');
+                };
+            } else {
+                recordBtn.disabled = true;
+                recordBtn.textContent = 'Speech Recognition Not Supported';
+            }
+        };
+
+        languageSelect.addEventListener('change', initializeRecognition);
+        initializeRecognition(); // Initialize on page load
+
+        // Text-to-Speech
+        let utterance = null;
+
+        function playSolution() {
+            const text = document.getElementById('solution').innerText;
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel(); // Stop any ongoing speech
+            }
+            utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = languageSelect.value;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function stopSpeech() {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel(); // Stop the speech
+            }
+        }
+
+        // Hide loader after response is received
+        window.addEventListener('load', () => {
+            loader.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
