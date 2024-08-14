@@ -2,6 +2,7 @@ from flask import Flask, render_template, request
 from gradio_client import Client
 from langdetect import detect, DetectorFactory
 from langdetect.lang_detect_exception import LangDetectException
+import os
 
 # Ensure consistent results
 DetectorFactory.seed = 0
@@ -86,5 +87,6 @@ def index():
     return render_template('index.html', disease=None, plants=None)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))  # Use the port provided by Render
+    app.run(host='0.0.0.0', port=port, debug=True)
 
